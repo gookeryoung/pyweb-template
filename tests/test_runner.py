@@ -293,6 +293,7 @@ def test_dev_keyboard_interrupt_triggers_cleanup() -> None:
         with (
             patch.object(runner, "_ensure_dev_env"),
             patch.object(subprocess, "Popen", return_value=mock_backend),
+            patch.object(subprocess, "run"),  # _cleanup 内部调用，无需真实执行
         ):
             runner.dev(args)
     except SystemExit:
