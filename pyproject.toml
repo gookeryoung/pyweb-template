@@ -25,8 +25,8 @@ dependencies = [
     # 异步任务（Celery + Redis）
     "celery>=5.4.0",
     "redis>=5.0.0",
-    # demo 运行依赖（httpx 客户端）
-    "httpx>=0.28.0",
+    # demo 运行依赖（httpx2 是 httpx 的 2.x 正式版，starlette 1.6 推荐）
+    "httpx2>=2.0",
 ]
 
 description = "Template for python web apps. (FastAPI + SQLAlchemy + Plugin 架构)"
