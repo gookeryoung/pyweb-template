@@ -154,19 +154,31 @@ def test_build_success() -> None:
     fake_run = MagicMock()
     fake_run.return_value = MagicMock(returncode=0)
 
-    # FRONTEND_DIR / "dist" → fake_dist
+    # FRONTEND_DIR / "dist" -> fake_dist
     fake_dist = MagicMock()
     fake_dist.is_dir.return_value = True
     fake_frontend = MagicMock()
     fake_frontend.is_dir.return_value = True
-    fake_frontend.__truediv__.side_effect = lambda _o: fake_dist
 
-    # ROOT_DIR / "src" / ... / "static" → fake_static（链式 / 都返回同一个）
+    def _fe_div(_o: object) -> MagicMock:
+        return fake_dist
+
+    fake_frontend.__truediv__.side_effect = _fe_div
+
+    # ROOT_DIR / "src" / ... / "static" -> fake_static（链式 / 都返回同一个）
     fake_static = MagicMock()
     fake_static.exists.return_value = False
-    fake_static.__truediv__.side_effect = lambda _o: fake_static
+
+    def _fs_div(_o: object) -> MagicMock:
+        return fake_static
+
+    fake_static.__truediv__.side_effect = _fs_div
     fake_root = MagicMock()
-    fake_root.__truediv__.side_effect = lambda _o: fake_static
+
+    def _fr_div(_o: object) -> MagicMock:
+        return fake_static
+
+    fake_root.__truediv__.side_effect = _fr_div
 
     with (
         patch.object(runner, "_ensure_dev_env"),
@@ -202,11 +214,15 @@ def test_build_without_dist_dir_skips_copy() -> None:
     fake_run = MagicMock()
     fake_run.return_value = MagicMock(returncode=0)
 
-    fake_frontend = MagicMock()
-    fake_frontend.is_dir.return_value = True
     fake_dist = MagicMock()
     fake_dist.is_dir.return_value = False
-    fake_frontend.__truediv__.return_value = fake_dist
+    fake_frontend = MagicMock()
+    fake_frontend.is_dir.return_value = True
+
+    def _fe_div2(_o: object) -> MagicMock:
+        return fake_dist
+
+    fake_frontend.__truediv__.side_effect = _fe_div2
 
     with (
         patch.object(runner, "_ensure_dev_env"),
