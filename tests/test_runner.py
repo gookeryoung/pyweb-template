@@ -6,7 +6,7 @@ import argparse
 import subprocess
 import sys
 from io import StringIO
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -93,3 +93,127 @@ def test_main_dev_subcommand_dispatches() -> None:
         with patch.object(sys, "argv", ["pywt", "dev", "--port", "9000"]):
             runner.main()
         mock_dev.assert_called_once()
+
+
+def test_main_build_subcommand_dispatches() -> None:
+    """main build 子命令应调用 build."""
+    with patch.object(runner, "build") as mock_build:
+        with patch.object(sys, "argv", ["pywt", "build"]):
+            runner.main()
+        mock_build.assert_called_once()
+
+
+def test_serve_invokes_uvicorn_run() -> None:
+    """serve 正常应调用 uvicorn.run."""
+    args = argparse.Namespace(host="127.0.0.1", port=8000, reload=False, workers=2)
+
+    with patch("uvicorn.run") as mock_run:
+        runner.serve(args)
+        mock_run.assert_called_once()
+        call_kwargs = mock_run.call_args.kwargs
+        assert call_kwargs["host"] == "127.0.0.1"
+        assert call_kwargs["port"] == 8000
+        assert call_kwargs["reload"] is False
+        assert call_kwargs["workers"] == 2
+
+
+def test_serve_reload_sets_workers_to_one() -> None:
+    """serve reload=True 时 workers 应被强制为 1."""
+    args = argparse.Namespace(host="0.0.0.0", port=9000, reload=True, workers=4)
+
+    with patch("uvicorn.run") as mock_run:
+        runner.serve(args)
+        call_kwargs = mock_run.call_args.kwargs
+        assert call_kwargs["workers"] == 1
+
+
+def test_ensure_dev_env_missing_frontend_exits() -> None:
+    """FRONTEND_DIR 不存在时 _ensure_dev_env 应 sys.exit(1)."""
+    fake = Mock()
+    fake.is_dir.return_value = False
+
+    with (
+        patch.object(runner, "FRONTEND_DIR", fake),
+        pytest.raises(SystemExit) as excinfo,
+    ):
+        runner._ensure_dev_env()
+    assert excinfo.value.code == 1
+
+
+def test_ensure_dev_env_existing_frontend_passes() -> None:
+    """FRONTEND_DIR 存在时 _ensure_dev_env 应正常返回."""
+    fake = Mock()
+    fake.is_dir.return_value = True
+    with patch.object(runner, "FRONTEND_DIR", fake):
+        runner._ensure_dev_env()  # 不抛异常即通过
+
+
+def test_build_success() -> None:
+    """build 正常流程：npm run build 成功且有 dist 目录."""
+    args = argparse.Namespace()
+    fake_run = MagicMock()
+    fake_run.return_value = MagicMock(returncode=0)
+
+    # FRONTEND_DIR / "dist" → fake_dist
+    fake_dist = MagicMock()
+    fake_dist.is_dir.return_value = True
+    fake_frontend = MagicMock()
+    fake_frontend.is_dir.return_value = True
+    fake_frontend.__truediv__.side_effect = lambda _o: fake_dist
+
+    # ROOT_DIR / "src" / ... / "static" → fake_static（链式 / 都返回同一个）
+    fake_static = MagicMock()
+    fake_static.exists.return_value = False
+    fake_static.__truediv__.side_effect = lambda _o: fake_static
+    fake_root = MagicMock()
+    fake_root.__truediv__.side_effect = lambda _o: fake_static
+
+    with (
+        patch.object(runner, "_ensure_dev_env"),
+        patch.object(subprocess, "run", fake_run),
+        patch.object(runner, "FRONTEND_DIR", fake_frontend),
+        patch.object(runner, "ROOT_DIR", fake_root),
+        patch("pyweb_template.runner.shutil.copytree"),
+    ):
+        runner.build(args)
+
+    assert fake_run.call_count == 1
+    assert fake_run.call_args[0][0][:2] == ["npm", "run"]
+
+
+def test_build_failure_exits_with_code() -> None:
+    """npm run build 返回非零时应 sys.exit(n)."""
+    args = argparse.Namespace()
+    fake_run = MagicMock()
+    fake_run.return_value = MagicMock(returncode=2)
+
+    with (
+        patch.object(runner, "_ensure_dev_env"),
+        patch.object(subprocess, "run", fake_run),
+        pytest.raises(SystemExit) as excinfo,
+    ):
+        runner.build(args)
+    assert excinfo.value.code == 2
+
+
+def test_build_without_dist_dir_skips_copy() -> None:
+    """dist 目录不存在时 build 应跳过复制步骤."""
+    args = argparse.Namespace()
+    fake_run = MagicMock()
+    fake_run.return_value = MagicMock(returncode=0)
+
+    fake_frontend = MagicMock()
+    fake_frontend.is_dir.return_value = True
+    fake_dist = MagicMock()
+    fake_dist.is_dir.return_value = False
+    fake_frontend.__truediv__.return_value = fake_dist
+
+    with (
+        patch.object(runner, "_ensure_dev_env"),
+        patch.object(subprocess, "run", fake_run),
+        patch.object(runner, "FRONTEND_DIR", fake_frontend),
+        patch("pyweb_template.runner.shutil.copytree") as mock_copy,
+    ):
+        runner.build(args)
+
+    mock_copy.assert_not_called()

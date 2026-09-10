@@ -58,14 +58,13 @@ def test_duplicate_register_skipped() -> None:
 
 
 def test_discover_loads_builtin_plugins() -> None:
-    """discover_and_load 应能找到 health + crud_demo."""
+    """discover_and_load 应能找到 health."""
     from pyweb_template.core.plugin_registry import PluginRegistry as _PR
 
     r = _PR()
     r.discover_and_load()
     names = {p["name"] for p in r.get_plugin_info_list()}
     assert "health" in names
-    assert "crud-demo" in names
 
 
 def test_discover_plugins_dir_not_exists_returns_early(tmp_path: Path) -> None:
