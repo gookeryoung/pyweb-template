@@ -19,6 +19,7 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 # 源码根目录（仅开发命令可用；wheel 安装后不存在）
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -57,7 +58,7 @@ def serve(args: argparse.Namespace) -> None:
 def dev(args: argparse.Namespace) -> None:
     """同时启动前后端开发服务器（需源码目录）."""
     _ensure_dev_env()
-    processes: list[subprocess.Popen] = []
+    processes: list[subprocess.Popen[Any]] = []
 
     def _cleanup(_sig=None, _frame=None):
         for p in processes:
@@ -96,7 +97,7 @@ def dev(args: argparse.Namespace) -> None:
     processes.append(backend)
 
     print(f"[run] 启动前端开发服务器 (port {frontend_port})...")
-    frontend_kwargs: dict = {"cwd": FRONTEND_DIR, "shell": True}
+    frontend_kwargs: dict[str, Any] = {"cwd": FRONTEND_DIR, "shell": True}
     if sys.platform == "win32":
         frontend_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     frontend = subprocess.Popen(

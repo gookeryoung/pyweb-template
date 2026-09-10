@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 from io import StringIO
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -62,13 +63,20 @@ def test_run_demo_command_plugins() -> None:
     assert rc == 0
 
 
-def test_dev_sets_reload_true() -> None:
-    """dev 应把 args.reload 置 True 然后转发给 serve."""
+def test_dev_starts_backend_and_frontend_subprocess() -> None:
+    """dev 应启动 backend + frontend 两个子进程."""
     args = argparse.Namespace(host="127.0.0.1", port=8000, reload=False, workers=1)
-    with patch.object(runner, "serve") as mock_serve:
+    mock_backend = Mock()
+    mock_backend.pid = 12345
+    mock_backend.wait.return_value = None  # 立即返回，不阻塞
+
+    with (
+        patch.object(runner, "_ensure_dev_env"),
+        patch.object(subprocess, "Popen", return_value=mock_backend) as mock_popen,
+    ):
         runner.dev(args)
-        assert args.reload is True
-        mock_serve.assert_called_once_with(args)
+        # Popen 应被调用两次：backend 和 frontend
+        assert mock_popen.call_count == 2
 
 
 def test_serve_no_uvicorn_prints_error_and_exits() -> None:
@@ -130,11 +138,11 @@ def test_main_serve_subcommand_dispatches() -> None:
 
 
 def test_main_dev_subcommand_dispatches() -> None:
-    """main dev 子命令应调用 serve（因为 dev 会被转成 reload=True 的 serve）."""
-    with patch.object(runner, "serve") as mock_serve:
+    """main dev 子命令应调用 dev（启动前后端子进程）."""
+    with patch.object(runner, "dev") as mock_dev:
         with patch.object(sys, "argv", ["pywt", "dev", "--port", "9000"]):
             runner.main()
-        mock_serve.assert_called_once()
+        mock_dev.assert_called_once()
 
 
 def test_main_demo_quickstart_exits_0() -> None:
