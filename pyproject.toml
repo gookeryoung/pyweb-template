@@ -8,24 +8,18 @@ classifiers = [
     "Framework :: FastAPI",
 ]
 
-# 核心运行时依赖（继承 endo 的精简栈）
 dependencies = [
     "fastapi>=0.115.0",
     "pydantic-settings>=2.0.0",
     "pydantic>=2.0.0",
     "sqlalchemy>=2.0.0",
     "uvicorn[standard]>=0.34.0",
-    # 数据库迁移
     "alembic>=1.14.0",
-    # 认证授权（JWT + 密码哈希）
     "bcrypt>=4.0.0,<5.0.0",
     "python-jose[cryptography]>=3.3.0",
-    # 文件上传与处理
     "python-multipart>=0.0.9",
-    # 异步任务（Celery + Redis）
     "celery>=5.4.0",
     "redis>=5.0.0",
-    # demo 运行依赖（httpx2 是 httpx 的 2.x 正式版，starlette 1.6 推荐）
     "httpx2>=2.0",
 ]
 

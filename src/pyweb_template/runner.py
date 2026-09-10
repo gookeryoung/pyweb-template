@@ -170,8 +170,10 @@ def main() -> None:
         serve(args)
         return
 
-    if args.command in {"serve", "dev"}:
+    if args.command == "serve":
         serve(args)
+    elif args.command == "dev":
+        dev(args)
     elif args.command == "demo":
         sys.exit(run_demo_command(args.subcmd))
     elif args.command == "info":
