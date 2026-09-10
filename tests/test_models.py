@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import Column, String, create_engine, select
-from sqlalchemy.orm import Session
+from sqlalchemy import String, create_engine, select
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from pyweb_template.models import Base, TimestampMixin
 
@@ -13,13 +13,12 @@ from pyweb_template.models import Base, TimestampMixin
 def test_base_is_declarative() -> None:
     """Base 应是 SQLAlchemy DeclarativeBase."""
 
-    # 直接声明 Base 的子类，看是否能被 SQLAlchemy 正常处理
     class Simple(Base):
         __tablename__ = "_test_simple"
-        name = Column(String(50), primary_key=True)
+        name: Mapped[str] = mapped_column(String(50), primary_key=True)
 
     assert hasattr(Simple, "__table__")
-    assert Simple.__table__.name == "_test_simple"
+    assert Simple.__table__.name == "_test_simple"  # type: ignore[union-attr]
 
 
 def test_timestamp_mixin_fields_exist() -> None:
@@ -27,9 +26,9 @@ def test_timestamp_mixin_fields_exist() -> None:
 
     class Timed(TimestampMixin, Base):
         __tablename__ = "_test_timed"
-        name = Column(String(50), nullable=False)
+        name: Mapped[str] = mapped_column(String(50), nullable=False)
 
-    columns = {c.name for c in Timed.__table__.columns}
+    columns = {c.name for c in Timed.__table__.columns}  # type: ignore[union-attr]
     assert "id" in columns
     assert "created_at" in columns
     assert "updated_at" in columns
@@ -41,7 +40,7 @@ def test_timestamp_mixin_creates_and_queries_sqlite() -> None:
 
     class User(TimestampMixin, Base):
         __tablename__ = "_test_users"
-        username = Column(String(50), nullable=False)
+        username: Mapped[str] = mapped_column(String(50), nullable=False)
 
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
@@ -57,13 +56,13 @@ def test_timestamp_mixin_creates_and_queries_sqlite() -> None:
         assert isinstance(u.created_at, dt.datetime)
         assert isinstance(u.updated_at, dt.datetime)
 
-        # 查询验证
-        result = session.execute(select(User).where(User.username == "alice")).scalar_one()
+        result = session.execute(
+            select(User).where(User.username == "alice")  # type: ignore[arg-type]
+        ).scalar_one()
         assert result.id == 1
         assert result.created_at == u.created_at
 
-    # 清理 metadata，避免与真实模型污染
-    Base.metadata.remove(User.__table__)
+    Base.metadata.remove(User.__table__)  # type: ignore[arg-type]
     engine.dispose()
 
 
@@ -72,7 +71,7 @@ def test_timestamp_mixin_updates_field_on_modify() -> None:
 
     class Post(TimestampMixin, Base):
         __tablename__ = "_test_posts"
-        title = Column(String(100), nullable=False)
+        title: Mapped[str] = mapped_column(String(100), nullable=False)
 
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
@@ -83,13 +82,11 @@ def test_timestamp_mixin_updates_field_on_modify() -> None:
         session.commit()
         session.refresh(p)
 
-        # SQLite 对 onupdate func.now() 的触发需要事务内 update
-        p.title = "hello"
+        p.title = "hello"  # type: ignore[assignment]
         session.commit()
         session.refresh(p)
 
-        # updated_at 至少应该存在且非空
         assert p.updated_at is not None
 
-    Base.metadata.remove(Post.__table__)
+    Base.metadata.remove(Post.__table__)  # type: ignore[arg-type]
     engine.dispose()

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import override
+from unittest.mock import patch
 
 from fastapi import APIRouter, FastAPI
 
@@ -57,7 +59,6 @@ def test_duplicate_register_skipped() -> None:
 
 def test_discover_loads_builtin_plugins() -> None:
     """discover_and_load 应能找到 health + crud_demo."""
-    # 用新实例避免全局单例影响
     from pyweb_template.core.plugin_registry import PluginRegistry as _PR
 
     r = _PR()
@@ -65,6 +66,24 @@ def test_discover_loads_builtin_plugins() -> None:
     names = {p["name"] for p in r.get_plugin_info_list()}
     assert "health" in names
     assert "crud-demo" in names
+
+
+def test_discover_plugins_dir_not_exists_returns_early(tmp_path: Path) -> None:
+    """plugins 目录不存在时 discover_and_load 应安全返回."""
+    r = PluginRegistry()
+    target = tmp_path / "nonexistent"
+    real_path = Path(__file__).resolve()
+
+    def fake_truediv(other: object) -> Path:
+        if str(other) == "plugins":
+            return target
+        return real_path / other  # type: ignore[operator]
+
+    with patch("pyweb_template.core.plugin_registry.Path") as MockPath:
+        MockPath.return_value = real_path
+        with patch.object(Path, "__truediv__", side_effect=fake_truediv):
+            r.discover_and_load()
+    assert len(r) == 0
 
 
 def test_mount_routes_is_idempotent() -> None:
@@ -131,3 +150,28 @@ def test_get_all_apps_collects() -> None:
     apps = r.get_all_apps()
     assert len(apps) == 1
     assert apps[0]["key"] == "x"
+
+
+def test_get_all_navigation_skips_non_navitem() -> None:
+    """register_navigation 返回非 NavItem 实例应被跳过."""
+
+    class BadNavPlugin(PluginBase):
+        name = "bad-nav-test"
+
+        @override
+        def register_routes(self, router: APIRouter) -> None:
+            pass
+
+        @override
+        def register_navigation(self) -> list[NavItem]:  # type: ignore[override]
+            return ["not-a-navitem"]  # type: ignore[return-value]
+
+    r = PluginRegistry()
+    r.register(BadNavPlugin())
+    assert r.get_all_navigation() == []
+
+
+def test_get_all_apps_no_items_returns_empty() -> None:
+    """没有插件注册 app 时应返回空列表."""
+    r = PluginRegistry()
+    assert r.get_all_apps() == []

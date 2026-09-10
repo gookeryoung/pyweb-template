@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.metadata
+from unittest.mock import patch
 
 import pytest
 
@@ -25,6 +26,18 @@ def test_get_version_pkg_installed() -> None:
     except importlib.metadata.PackageNotFoundError:
         pytest.skip("包未安装，跳过")
     assert _get_version() == expected
+
+
+def test_get_version_fallback_when_not_installed() -> None:
+    """包未安装时 _get_version 应返回 fallback 值."""
+
+    def raise_pkg_not_found(_name: str) -> str:
+        raise importlib.metadata.PackageNotFoundError("pyweb_template")
+
+    with patch.object(importlib.metadata, "version", side_effect=raise_pkg_not_found):
+        v = _get_version()
+        assert v  # 非空字符串
+        assert "." in v  # 版本号格式
 
 
 def test_database_url_default_sqlite() -> None:
