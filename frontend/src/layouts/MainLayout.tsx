@@ -8,6 +8,9 @@ import {
   Space,
   Button,
   Drawer,
+  Dropdown,
+  Avatar,
+  Badge,
 } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import type { MenuProps } from 'antd'
@@ -60,6 +63,12 @@ export default function MainLayout() {
       systemApi.navigation().then((r) => r.data.navigation),
   })
 
+  // 获取 APP 功能模块列表（Header 应用下拉 + 应用中心共用）
+  const { data: apps = [] } = useQuery({
+    queryKey: ['apps'],
+    queryFn: () => systemApi.apps().then((r) => r.data),
+  })
+
   // 获取框架健康信息（应用名、版本）
   const { data: healthData } = useQuery({
     queryKey: ['health'],
@@ -93,6 +102,33 @@ export default function MainLayout() {
     navigate(key)
     if (isMobile) setDrawerVisible(false)
   }
+
+  // APP 下拉菜单（Header 右上角）
+  const appMenuItems: MenuProps['items'] = [
+    {
+      key: 'app-center',
+      icon: <Icons.AppstoreOutlined />,
+      label: '应用中心',
+      onClick: () => navigate('/apps'),
+    },
+    { type: 'divider' },
+    ...apps.map((app) => ({
+      key: app.path,
+      icon: resolveIcon(app.icon),
+      label: app.label,
+      onClick: () => navigate(app.path),
+    })),
+  ]
+
+  // 用户下拉菜单（占位，后续接入 auth 插件时替换）
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'user-info',
+      icon: <Icons.UserOutlined />,
+      label: '未登录',
+      disabled: true,
+    },
+  ]
 
   // 侧边栏菜单内容（Sider / Drawer 共用）
   const MenuContent = () => (
@@ -193,11 +229,33 @@ export default function MainLayout() {
               {isMobile ? healthData?.app || 'pywt' : `${healthData?.app || 'pywt'} · FastAPI 插件模板`}
             </Title>
           </Space>
+
+          {/* 右上角操作区：应用下拉 + 用户菜单 */}
           <Space size={isMobile ? 'small' : 'middle'}>
-            <Icons.ApiOutlined />
-            <Text style={{ fontSize: isMobile ? 12 : 14 }}>
-              API {healthData?.version || '--'}
-            </Text>
+            {/* 应用入口（桌面端显示，移动端可从侧边栏访问） */}
+            {!isMobile && (
+              <Dropdown menu={{ items: appMenuItems }} placement="bottomRight">
+                <Badge count={apps.length} size="small" offset={[-2, 2]}>
+                  <Space style={{ cursor: 'pointer' }}>
+                    <Icons.AppstoreOutlined style={{ fontSize: 16 }} />
+                    <Text style={{ fontSize: isTablet ? 12 : 14 }}>应用</Text>
+                  </Space>
+                </Badge>
+              </Dropdown>
+            )}
+
+            {/* 用户入口（占位） */}
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+              <Space style={{ cursor: 'pointer' }}>
+                <Avatar
+                  size={isMobile ? 'small' : 'small'}
+                  icon={<Icons.UserOutlined />}
+                />
+                {!isMobile && (
+                  <Text style={{ fontSize: isTablet ? 12 : 14 }}>未登录</Text>
+                )}
+              </Space>
+            </Dropdown>
           </Space>
         </Header>
 

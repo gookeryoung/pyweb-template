@@ -28,6 +28,17 @@ export interface NavItem {
   children?: NavItem[]
 }
 
+/** APP 功能模块入口（应用中心 / Header 应用下拉共用） */
+export interface AppItem {
+  key: string
+  label: string
+  description: string
+  icon: string
+  path: string
+  /** 分类：tool=实用工具 / analysis=分析工具 / integration=集成对接 */
+  category: string
+}
+
 /** 健康检查插件 ping 响应（GET /api/v1/health/ping） */
 export interface HealthPingResponse {
   status: string
@@ -79,6 +90,8 @@ export const systemApi = {
   plugins: () => api.get<{ plugins: PluginInfo[] }>('/plugins'),
   /** 汇总所有插件注册的侧边栏导航项 */
   navigation: () => api.get<{ navigation: NavItem[] }>('/navigation'),
+  /** 汇总所有插件注册的 APP 功能模块入口（应用中心 + Header 应用下拉共用） */
+  apps: () => api.get<AppItem[]>('/apps'),
   /** 内置 demo 端点清单 */
   demos: () => api.get('/demos'),
 }

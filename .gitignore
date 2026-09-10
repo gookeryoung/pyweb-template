@@ -34,3 +34,4 @@ coverage.xml
 docs/_build/
 .trae/ref
 *.py.bak
+src/pyweb_template/static
