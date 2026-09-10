@@ -29,7 +29,7 @@ license = "MIT"
 name = "pyweb_template"
 readme = "README.md"
 requires-python = ">=3.13"
-version = "0.1.0"
+version = "0.1.1"
 
 # CLI 入口（短名 pywt）
 [project.scripts]
