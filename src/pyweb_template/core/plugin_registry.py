@@ -25,12 +25,16 @@ class PluginRegistry:
 
     生命周期：
     1. discover_and_load() — 扫描 plugins 包，发现并实例化所有插件
-    2. mount_routes(app)   — 将每个插件的 router 挂到 FastAPI app 上
+    2. mount_routes(app)   — 将每个插件的 router 挂到 FastAPI app 上（幂等）
     3. get_all_navigation() / get_all_apps() — 供前端动态构建菜单
+
+    幂等机制：mount_routes 内部用 _mounted_app_ids 追踪已挂载过的 app，
+    避免 TestClient 多次触发 lifespan 或测试重复调用导致路由累积。
     """
 
     def __init__(self) -> None:
         self._plugins: dict[str, PluginBase] = {}
+        self._mounted_app_ids: set[int] = set()
 
     # ── 注册 ─────────────────────────────────────────────
 
@@ -84,19 +88,23 @@ class PluginRegistry:
     # ── 路由挂载 ──────────────────────────────────────────
 
     def mount_routes(self, app: FastAPI) -> None:
-        """挂载所有插件路由（在插件加载后调用）.
+        """挂载所有插件路由（在插件加载后调用，幂等）.
 
-        FastAPI 的 include_router 会自动去重同一路径前缀的路由，
-        多次调用不会累积，因此无需额外幂等标记。
-        这让测试中不同 TestClient（共享同一个 app 实例）的
-        lifespan 都能正确挂载插件路由。
+        幂等：同一 app 实例只挂一次，多次调用不累积路由。
         """
+        app_id = id(app)
+        if app_id in self._mounted_app_ids:
+            logger.debug("app 已挂载过插件路由，跳过: id=%s", app_id)
+            return
+
         for name, plugin in self._plugins.items():
             router = APIRouter()
             plugin.register_routes(router)
             prefix = f"{settings.API_V1_PREFIX}/{name}"
             app.include_router(router, prefix=prefix, tags=[plugin.name])
             logger.info("插件路由已挂载: %s -> %s", name, prefix)
+
+        self._mounted_app_ids.add(app_id)
 
     def get_plugin_info_list(self) -> list[dict[str, str]]:
         """获取所有已注册插件的元信息."""

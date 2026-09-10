@@ -11,8 +11,21 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
-# 项目根目录（src/pyweb_template/core/config.py → 上溯 3 层）
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+def _find_project_root() -> Path:
+    """从当前文件向上递归查找 pyproject.toml 所在目录.
+
+    兼容 editable install（src layout）、wheel 安装和直接运行脚本三种场景。
+    """
+    here = Path(__file__).resolve().parent
+    for candidate in (here, *here.parents):
+        if (candidate / "pyproject.toml").is_file():
+            return candidate
+    # 兜底：回退到 src 的上一级
+    return here.parent.parent
+
+
+BASE_DIR = _find_project_root()
 
 
 def _get_version() -> str:

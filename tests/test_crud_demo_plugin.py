@@ -29,7 +29,6 @@ def test_create_user(client: TestClient) -> None:
     d = r.json()
     assert d["username"] == "alice"
     assert "id" in d
-    return  # 不返回，pytest 里直接断言
 
 
 def test_get_user(client: TestClient) -> None:

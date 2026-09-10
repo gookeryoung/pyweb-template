@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from typing import override
+
+from fastapi import APIRouter, FastAPI
 
 from pyweb_template.core.plugin_registry import PluginRegistry
 from pyweb_template.plugins.base import AppItem, NavItem, PluginBase
@@ -24,7 +26,8 @@ def test_register_and_get() -> None:
         name = "fake"
         description = "test"
 
-        def register_routes(self, router) -> None:  # noqa: ANN001
+        @override
+        def register_routes(self, router: APIRouter) -> None:
             pass
 
     r = PluginRegistry()
@@ -42,7 +45,8 @@ def test_duplicate_register_skipped() -> None:
     class FakePlugin(PluginBase):
         name = "dup"
 
-        def register_routes(self, router) -> None:  # noqa: ANN001
+        @override
+        def register_routes(self, router: APIRouter) -> None:
             pass
 
     r = PluginRegistry()
@@ -69,7 +73,8 @@ def test_mount_routes_is_idempotent() -> None:
     class FakePlugin(PluginBase):
         name = "idempotent-test"
 
-        def register_routes(self, router) -> None:  # noqa: ANN001
+        @override
+        def register_routes(self, router: APIRouter) -> None:
             @router.get("/ping")
             def ping() -> str:
                 return "ok"
@@ -91,9 +96,11 @@ def test_get_all_navigation_collects() -> None:
     class NavPlugin(PluginBase):
         name = "nav-test"
 
-        def register_routes(self, router) -> None:  # noqa: ANN001
+        @override
+        def register_routes(self, router: APIRouter) -> None:
             pass
 
+        @override
         def register_navigation(self) -> list[NavItem]:
             return [NavItem(key="a", label="A", path="/a")]
 
@@ -111,9 +118,11 @@ def test_get_all_apps_collects() -> None:
     class AppPlugin(PluginBase):
         name = "app-test"
 
-        def register_routes(self, router) -> None:  # noqa: ANN001
+        @override
+        def register_routes(self, router: APIRouter) -> None:
             pass
 
+        @override
         def register_apps(self) -> list[AppItem]:
             return [AppItem(key="x", label="X", path="/x")]
 

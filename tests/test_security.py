@@ -27,7 +27,10 @@ def test_create_and_decode_token() -> None:
 
 
 def test_decode_invalid_token_raises() -> None:
-    import jose  # noqa: F401
+    try:
+        from jose import JWTError
+    except ImportError:
+        pytest.skip("python-jose 未安装，跳过")
 
-    with pytest.raises(Exception):  # jose.JWTError
+    with pytest.raises(JWTError):
         security.decode_access_token("not.a.valid.token")

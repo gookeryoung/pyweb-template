@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from typing import override
+
 import pytest
+from fastapi import APIRouter
 
 from pyweb_template.plugins.base import AppItem, NavItem, PluginBase
 
@@ -47,7 +50,8 @@ def test_pluginbase_get_info_defaults() -> None:
         version = "1.0"
         description = "desc"
 
-        def register_routes(self, router) -> None:  # noqa: ANN001
+        @override
+        def register_routes(self, router: APIRouter) -> None:
             pass
 
     info = Concrete().get_info()
