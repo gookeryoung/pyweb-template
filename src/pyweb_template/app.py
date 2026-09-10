@@ -5,6 +5,7 @@
 - 启动时自动发现并挂载所有插件
 - 暴露框架级元路由（/api/health /api/plugins /api/demos /api/navigation）
 - 不承载业务逻辑，业务由 plugins 按需挂载
+- 使用 FastAPIOffline，Swagger UI / ReDoc 静态资源从本地加载，避免外网依赖
 
 启动方式：
 - pywt serve（CLI 入口，见 runner.py）
@@ -19,6 +20,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_offline import FastAPIOffline
 
 from pyweb_template.core.config import settings
 from pyweb_template.core.plugin_registry import plugin_registry
@@ -31,7 +33,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     yield
 
 
-app = FastAPI(
+app = FastAPIOffline(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="pyweb-template - FastAPI + SQLAlchemy + Plugin 架构脚手架",

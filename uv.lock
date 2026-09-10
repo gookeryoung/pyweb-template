@@ -589,6 +589,18 @@ wheels = [
 ]
 
 [[package]]
+name = "fastapi-offline"
+version = "1.7.7"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "fastapi" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/15/a5/f650b565354d38f98211683a7b5c3578d450848421444799cb51da8e562f/fastapi_offline-1.7.7.tar.gz", hash = "sha256:aeeabe67dd40f867ab0fe64dd8de742949e36ba5f3ac6aeb055baef274ed91d0" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/8d/de/808ff88dac73c97ad32c653f92f6751ea5a0a211ae1dffd471125e63a31e/fastapi_offline-1.7.7-py3-none-any.whl", hash = "sha256:60c8399fd7d3e3b01510e14468709e3dea1a0e773ef920372d057392d736a1f9" },
+]
+
+[[package]]
 name = "greenlet"
 version = "3.5.5"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -1179,6 +1191,7 @@ dependencies = [
     { name = "bcrypt" },
     { name = "celery" },
     { name = "fastapi" },
+    { name = "fastapi-offline" },
     { name = "httpx2" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -1230,6 +1243,7 @@ requires-dist = [
     { name = "bcrypt", specifier = ">=4.0.0,<5.0.0" },
     { name = "celery", specifier = ">=5.4.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "fastapi-offline", specifier = ">=1.7.0" },
     { name = "httpx2", specifier = ">=2.0" },
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=3.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
