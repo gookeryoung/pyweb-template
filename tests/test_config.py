@@ -61,3 +61,13 @@ def test_version_is_str() -> None:
     """APP_VERSION 应是非空字符串."""
     assert isinstance(Settings().APP_VERSION, str)
     assert Settings().APP_VERSION
+
+
+def test_find_project_root_falls_back_when_no_pyproject() -> None:
+    """找不到 pyproject.toml 时应回退到 src 的上一级."""
+    from pyweb_template.core import config as config_module
+
+    with patch.object(config_module.Path, "is_file", return_value=False):
+        # 直接调私有函数，验证兜底返回值
+        result = config_module._find_project_root()
+        assert result is not None

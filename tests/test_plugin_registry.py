@@ -174,3 +174,24 @@ def test_get_all_apps_no_items_returns_empty() -> None:
     """没有插件注册 app 时应返回空列表."""
     r = PluginRegistry()
     assert r.get_all_apps() == []
+
+
+def test_discover_handles_import_error_gracefully(tmp_path: Path) -> None:
+    """某个插件的 plugin.py 导入失败应被跳过."""
+    import importlib
+
+    r = PluginRegistry()
+
+    # 创建一个临时插件目录结构
+    plugin_dir = tmp_path / "broken_plugin"
+    plugin_dir.mkdir()
+    (plugin_dir / "__init__.py").write_text("")
+    (plugin_dir / "plugin.py").write_text("raise ImportError('broken')")
+
+    with patch("pyweb_template.core.plugin_registry.Path") as MockPath:
+        # Mock Path(__file__).resolve().parent.parent → 指向 tmp_path
+        MockPath.return_value = tmp_path
+        with patch.object(importlib, "import_module", side_effect=ImportError("broken")):
+            r.discover_and_load()
+
+    assert len(r) == 0

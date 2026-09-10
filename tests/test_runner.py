@@ -233,3 +233,50 @@ def test_build_without_dist_dir_skips_copy() -> None:
         runner.build(args)
 
     mock_copy.assert_not_called()
+
+
+def test_build_with_existing_static_dir() -> None:
+    """build 时 static 目录已存在应先 rmtree 再 copytree."""
+    args = argparse.Namespace()
+    fake_run = MagicMock()
+    fake_run.return_value = MagicMock(returncode=0)
+
+    fake_dist = MagicMock()
+    fake_dist.is_dir.return_value = True
+    fake_frontend = MagicMock()
+    fake_frontend.is_dir.return_value = True
+
+    def _fe_div(_o: object) -> MagicMock:
+        return fake_dist
+
+    fake_frontend.__truediv__.side_effect = _fe_div
+
+    fake_static = MagicMock()
+    fake_static.exists.return_value = True  # 触发 rmtree 分支
+
+    def _fs_div(_o: object) -> MagicMock:
+        return fake_static
+
+    fake_static.__truediv__.side_effect = _fs_div
+    fake_root = MagicMock()
+
+    def _fr_div(_o: object) -> MagicMock:
+        return fake_static
+
+    fake_root.__truediv__.side_effect = _fr_div
+
+    mock_rmtree = MagicMock()
+    mock_copy = MagicMock()
+
+    with (
+        patch.object(runner, "_ensure_dev_env"),
+        patch.object(subprocess, "run", fake_run),
+        patch.object(runner, "FRONTEND_DIR", fake_frontend),
+        patch.object(runner, "ROOT_DIR", fake_root),
+        patch("pyweb_template.runner.shutil.rmtree", mock_rmtree),
+        patch("pyweb_template.runner.shutil.copytree", mock_copy),
+    ):
+        runner.build(args)
+
+    mock_rmtree.assert_called_once()
+    mock_copy.assert_called_once()

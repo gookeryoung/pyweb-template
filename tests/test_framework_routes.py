@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -9,8 +11,9 @@ from pyweb_template.app import app
 
 
 @pytest.fixture()
-def client() -> TestClient:
-    return TestClient(app)
+def client() -> Generator[TestClient]:
+    with TestClient(app) as c:
+        yield c
 
 
 def test_health_endpoint(client: TestClient) -> None:
