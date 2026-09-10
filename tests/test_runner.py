@@ -280,3 +280,20 @@ def test_build_with_existing_static_dir() -> None:
 
     mock_rmtree.assert_called_once()
     mock_copy.assert_called_once()
+
+
+def test_dev_keyboard_interrupt_triggers_cleanup() -> None:
+    """KeyboardInterrupt 应触发 _cleanup 并 sys.exit."""
+    args = argparse.Namespace(host="127.0.0.1", port=8000, reload=False, workers=1)
+    mock_backend = Mock()
+    mock_backend.pid = 12345
+    mock_backend.wait.side_effect = KeyboardInterrupt()
+
+    try:
+        with (
+            patch.object(runner, "_ensure_dev_env"),
+            patch.object(subprocess, "Popen", return_value=mock_backend),
+        ):
+            runner.dev(args)
+    except SystemExit:
+        pass

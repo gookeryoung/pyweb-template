@@ -65,6 +65,7 @@ def test_discover_loads_builtin_plugins() -> None:
     r.discover_and_load()
     names = {p["name"] for p in r.get_plugin_info_list()}
     assert "health" in names
+    assert r.get_all_apps() == []
 
 
 def test_discover_plugins_dir_not_exists_returns_early(tmp_path: Path) -> None:
