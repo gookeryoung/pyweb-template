@@ -26,43 +26,6 @@ def test_info_command_prints_version() -> None:
     assert "pyweb_template" in output
 
 
-def test_demo_plugins_discovers_builtin() -> None:
-    """demo plugins 应发现两个内置插件."""
-    rc = runner.demo_plugins()
-    assert rc == 0
-
-
-def test_demo_quickstart_success() -> None:
-    """demo quickstart 应完整跑通."""
-    rc = runner.demo_quickstart()
-    assert rc == 0
-
-
-def test_demo_unknown_subcommand_returns_error() -> None:
-    """未知 demo 子命令应返回 1 并打印提示."""
-    old_stderr = sys.stderr
-    sys.stderr = StringIO()
-    try:
-        rc = runner.run_demo_command("nonexistent")
-        err = sys.stderr.getvalue()
-    finally:
-        sys.stderr = old_stderr
-    assert rc == 1
-    assert "未知 demo 子命令" in err
-
-
-def test_run_demo_command_quickstart() -> None:
-    """run_demo_command 应能分发 quickstart."""
-    rc = runner.run_demo_command("quickstart")
-    assert rc == 0
-
-
-def test_run_demo_command_plugins() -> None:
-    """run_demo_command 应能分发 plugins."""
-    rc = runner.run_demo_command("plugins")
-    assert rc == 0
-
-
 def test_dev_starts_backend_and_frontend_subprocess() -> None:
     """dev 应启动 backend + frontend 两个子进程."""
     args = argparse.Namespace(host="127.0.0.1", port=8000, reload=False, workers=1)
@@ -100,19 +63,6 @@ def test_serve_no_uvicorn_prints_error_and_exits() -> None:
             sys.stderr = old_stderr
 
 
-def test_demo_quickstart_no_testclient_returns_1() -> None:
-    """fastapi.testclient 缺失时 demo_quickstart 应返回 1."""
-
-    def raise_or_passthrough(name: str, *args: object, **kwargs: object) -> object:
-        if name.startswith("fastapi.testclient"):
-            raise ImportError("no testclient")
-        return __import__(name, *args, **kwargs)  # type: ignore[arg-type]
-
-    with patch("builtins.__import__", side_effect=raise_or_passthrough):
-        rc = runner.demo_quickstart()
-        assert rc == 1
-
-
 def test_main_with_no_command_defaults_to_serve() -> None:
     """main 无参数时应走 serve 路径."""
     with patch.object(runner, "serve") as mock_serve:
@@ -143,27 +93,3 @@ def test_main_dev_subcommand_dispatches() -> None:
         with patch.object(sys, "argv", ["pywt", "dev", "--port", "9000"]):
             runner.main()
         mock_dev.assert_called_once()
-
-
-def test_main_demo_quickstart_exits_0() -> None:
-    """main demo quickstart 应 sys.exit(0)."""
-    with patch.object(sys, "argv", ["pywt", "demo", "quickstart"]):
-        with pytest.raises(SystemExit) as excinfo:
-            runner.main()
-        assert excinfo.value.code == 0
-
-
-def test_main_demo_plugins_exits_0() -> None:
-    """main demo plugins 应 sys.exit(0)."""
-    with patch.object(sys, "argv", ["pywt", "demo", "plugins"]):
-        with pytest.raises(SystemExit) as excinfo:
-            runner.main()
-        assert excinfo.value.code == 0
-
-
-def test_main_demo_unknown_subcmd_argparse_exits_2() -> None:
-    """main demo 子命令传 argparse 未知 choice 时由 argparse sys.exit(2)."""
-    with patch.object(sys, "argv", ["pywt", "demo", "bogus"]):
-        with pytest.raises(SystemExit) as excinfo:
-            runner.main()
-        assert excinfo.value.code == 2

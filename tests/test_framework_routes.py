@@ -26,21 +26,11 @@ def test_plugins_endpoint(client: TestClient) -> None:
     assert r.status_code == 200
     names = {p["name"] for p in r.json()["plugins"]}
     assert "health" in names
-    assert "crud-demo" in names
 
 
 def test_navigation_endpoint(client: TestClient) -> None:
     r = client.get("/api/navigation")
     assert r.status_code == 200
     nav = r.json()["navigation"]
-    keys = {n["key"] for n in nav}
-    assert "crud-demo" in keys
-
-
-def test_demos_endpoint(client: TestClient) -> None:
-    r = client.get("/api/demos")
-    assert r.status_code == 200
-    d = r.json()
-    assert "cli" in d
-    assert "http" in d
-    assert len(d["http"]) >= 4
+    # 当前只有 health 插件（无 navigation 注册），返回空列表是合法的
+    assert isinstance(nav, list)

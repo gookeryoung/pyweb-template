@@ -3,7 +3,7 @@
 职责：
 - 组装 FastAPI app（配置/中间件/lifespan）
 - 启动时自动发现并挂载所有插件
-- 暴露框架级元路由（/api/health /api/plugins /api/demos /api/navigation）
+- 暴露框架级元路由（/api/health /api/plugins /api/navigation）
 - 不承载业务逻辑，业务由 plugins 按需挂载
 - 使用 FastAPIOffline，Swagger UI / ReDoc 静态资源从本地加载，避免外网依赖
 
@@ -72,32 +72,3 @@ def list_plugins() -> dict[str, object]:
 def get_navigation() -> dict[str, object]:
     """汇总所有插件注册的侧边栏导航项."""
     return {"navigation": plugin_registry.get_all_navigation()}
-
-
-@app.get("/api/demos", tags=["framework"])
-def get_demos() -> dict[str, object]:
-    """列出内置 demo 入口的 HTTP 端点清单."""
-    from pyweb_template.plugins.base import NavItem
-
-    plugins_nav: dict[str, list[dict[str, Any]]] = {}
-    for plugin in plugin_registry._plugins.values():
-        items = plugin.register_navigation()
-        plugins_nav[plugin.name] = [i.to_dict() for i in items if isinstance(i, NavItem)]
-
-    return {
-        "cli": [
-            "pywt serve           启动开发服务器",
-            "pywt demo quickstart 串行跑最小 CRUD demo",
-            "pywt demo plugins    列出所有已发现插件",
-            "pywt info            打印版本/配置/运行环境",
-        ],
-        "http": [
-            {"path": "/api/health", "desc": "框架健康检查"},
-            {"path": "/api/plugins", "desc": "已加载插件列表"},
-            {"path": "/api/navigation", "desc": "侧边栏导航汇总"},
-            {"path": "/api/demos", "desc": "本端点"},
-            {"path": "/api/v1/health/ping", "desc": "health 插件存活探针"},
-            {"path": "/api/v1/crud-demo/users", "desc": "crud_demo 插件用户列表"},
-        ],
-        "plugins_navigation": plugins_nav,
-    }

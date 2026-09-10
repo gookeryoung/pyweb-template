@@ -4,8 +4,6 @@
 - serve              启动 uvicorn 服务器
 - dev                开发模式：同时启动前后端（需源码目录）
 - build              构建前后端（需源码目录）
-- demo quickstart    串行跑最小 CRUD demo（启动->CRUD->清理）
-- demo plugins       列出所有已发现插件（纯模块扫描，不启动服务器）
 - info               打印版本/配置/运行环境
 
 实现策略：argparse 标准库（避免引入 typer/click），子命令通过函数分发。
@@ -142,85 +140,6 @@ def build(_args: argparse.Namespace) -> None:
     print("[ok] 全部构建完成！")
 
 
-def demo_quickstart() -> int:
-    """最小可运行 demo：启动服务器 -> CRUD 一条 User -> 清理退出."""
-    try:
-        from fastapi.testclient import TestClient
-    except ImportError as exc:
-        print(f"[error] demo 依赖未安装: {exc}", file=sys.stderr)
-        print("        执行 `uv sync --extra demo`", file=sys.stderr)
-        return 1
-
-    from pyweb_template.app import app
-
-    with TestClient(app) as client:
-        # 1) 健康检查
-        resp = client.get("/api/health")
-        assert resp.status_code == 200 and resp.json().get("status") == "ok", resp.text
-
-        # 2) 创建用户
-        resp = client.post(
-            "/api/v1/crud-demo/users",
-            json={"username": "pywt-demo", "email": "demo@pywt.local", "role": "user"},
-        )
-        assert resp.status_code == 201, resp.text
-        user = resp.json()
-        user_id = user["id"]
-        print(f"  [ok] 创建用户 id={user_id}")
-
-        # 3) 查询列表
-        resp = client.get("/api/v1/crud-demo/users")
-        assert resp.status_code == 200, resp.text
-        print(f"  [ok] 列表共 {len(resp.json()['items'])} 条")
-
-        # 4) 查询单个
-        resp = client.get(f"/api/v1/crud-demo/users/{user_id}")
-        assert resp.status_code == 200 and resp.json()["username"] == "pywt-demo", resp.text
-        print("  [ok] 查询单个用户")
-
-        # 5) 更新
-        resp = client.put(f"/api/v1/crud-demo/users/{user_id}", json={"email": "updated@pywt.local"})
-        assert resp.status_code == 200 and resp.json()["email"] == "updated@pywt.local", resp.text
-        print("  [ok] 更新用户邮箱")
-
-        # 6) 删除
-        resp = client.delete(f"/api/v1/crud-demo/users/{user_id}")
-        assert resp.status_code == 204, resp.text
-        print("  [ok] 删除用户")
-
-        # 7) 插件列表
-        resp = client.get("/api/plugins")
-        assert resp.status_code == 200, resp.text
-        plugins = [p["name"] for p in resp.json()["plugins"]]
-        print(f"  [ok] 已加载插件: {plugins}")
-
-    print("\n  demo quickstart 全部通过")
-    return 0
-
-
-def demo_plugins() -> int:
-    """列出 plugins 目录下所有插件（纯文件扫描，不启动服务器）."""
-    from pyweb_template.core.plugin_registry import plugin_registry
-
-    plugin_registry.discover_and_load()
-    infos = plugin_registry.get_plugin_info_list()
-    print(f"共发现 {len(infos)} 个插件:\n")
-    for info in infos:
-        print(f"  - {info['name']:<16} v{info['version']:<8} {info['description']}")
-    return 0
-
-
-def run_demo_command(subcmd: str) -> int:
-    """分发 demo 子命令."""
-    if subcmd == "quickstart":
-        return demo_quickstart()
-    if subcmd == "plugins":
-        return demo_plugins()
-    print(f"[error] 未知 demo 子命令: {subcmd}", file=sys.stderr)
-    print("        可用: quickstart / plugins", file=sys.stderr)
-    return 1
-
-
 def info_command() -> int:
     """打印版本/配置/运行环境."""
     import platform
@@ -260,9 +179,6 @@ def main() -> None:
 
     sub.add_parser("build", help="构建前后端（需源码目录）")
 
-    p_demo = sub.add_parser("demo", help="运行内置 demo")
-    p_demo.add_argument("subcmd", choices=["quickstart", "plugins"])
-
     sub.add_parser("info", help="打印版本/配置/运行环境")
 
     args = parser.parse_args()
@@ -281,8 +197,6 @@ def main() -> None:
         dev(args)
     elif args.command == "build":
         build(args)
-    elif args.command == "demo":
-        sys.exit(run_demo_command(args.subcmd))
     elif args.command == "info":
         sys.exit(info_command())
     else:
