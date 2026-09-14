@@ -1,4 +1,4 @@
-extend-exclude = ["docs", "examples", "template"]
+extend-exclude = ["docs", "examples", "template", "alembic"]
 line-length    = 120
 target-version = "py313"
 
@@ -6,16 +6,18 @@ target-version = "py313"
 ignore = [
     "E501",    # line too long (handled by formatter)
     "PLC0415", # import should be at top-level (intentional for lazy imports)
+    "PLR0913", # too many arguments (FastAPI 路由天然有多个 path 参数 + Depends)
     "PLR0915", # too many statements (intentional for complex methods)
+    "PLR0917", # too many positional arguments (同上)
     "PLR2004", # magic value comparison
     "RUF001",  # ambiguous unicode characters in string
     "RUF002",  # ambiguous unicode characters in docstring
     "RUF003",  # ambiguous unicode characters in comment
     "RUF012",  # mutable class attributes (intentional for config)
+    "RUF030",  # FastAPI path params 必须保留 Annotated[type, Path(...)] 即使只有一个注解
     "SIM108",  # use ternary operator
-    # UP045 建议 Optional[X] -> X | None（PEP 604），但 typer 运行时用 typing.get_type_hints()
-    # 求值注解，X | None 在 Python 3.8/3.9 会抛 TypeError。typer 命令函数须保留 Optional[X]。
-    "UP045",
+    "UP045",   # PEP 604 Optional[X] -> X | None（typer 运行时兼容性，保留）
+    "B008",    # FastAPI Depends 在默认参数里是标准模式
 ]
 select = [
     "ARG", # flake8-unused-arguments
@@ -33,4 +35,4 @@ select = [
 ]
 
 [lint.per-file-ignores]
-"**/tests/**" = ["ARG001", "ARG002"]
+"**/tests/**" = ["ARG001", "ARG002", "ARG005"]

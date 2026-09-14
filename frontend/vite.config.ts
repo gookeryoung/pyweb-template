@@ -23,5 +23,8 @@ export default defineConfig({
     // 构建产物直接输出到后端 static 目录，由 FastAPI 统一 serve
     outDir: path.resolve(__dirname, '../src/pyweb_template/static'),
     emptyOutDir: true,
+    // 现代浏览器目标：去掉 asyncIterator/Map/Set/Proxy 等老 polyfill
+    target: 'es2022',
+    chunkSizeWarningLimit: 1500,
   },
 })

@@ -1,0 +1,75 @@
+# ────────────────────────────────────────────────────────────────────
+# pyweb_template 部署编排 — 源码形态
+#
+# app 容器：FastAPI + SQLAlchemy + 插件（/api/* 动态接口）
+# web 容器：nginx 直出前端静态 + SPA fallback + 反代 /api/* 到 app
+# PostgreSQL 为可选 profile（--profile pg 启用）
+#
+# 快速开始（SQLite）:
+#   docker compose up -d --build
+#   docker compose exec app alembic upgrade head   # 首次初始化
+#
+# PostgreSQL:
+#   docker compose --profile pg up -d --build
+#   docker compose exec app alembic upgrade head
+# ────────────────────────────────────────────────────────────────────
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    image: pywt-app:latest
+    container_name: pywt-app
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////data/pyweb_template.db}
+    volumes:
+      - pywt-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    image: pywt-web:latest
+    container_name: pywt-web
+    ports:
+      - "${PYWT_PORT:-80}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── PostgreSQL（可选 profile）──
+  postgres:
+    image: docker.m.daocloud.io/library/postgres:16-alpine
+    container_name: pywt-postgres
+    profiles: ["pg"]
+    environment:
+      POSTGRES_USER: pywt
+      POSTGRES_PASSWORD: ${PYWT_DB_PASSWORD:-pywt_pass}
+      POSTGRES_DB: pywt
+    volumes:
+      - pywt-pg-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pywt -d pywt"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pywt-data:
+  pywt-pg-data:

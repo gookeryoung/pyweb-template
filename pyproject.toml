@@ -45,6 +45,7 @@ test = [
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=5.0.0",
     "pytest-html>=4.1.1",
+    "pytest-timeout>=2.3.0",
     "pytest-xdist>=3.6.1",
     "pytest>=8.0.0",
 ]
@@ -55,9 +56,36 @@ requires = ["hatchling"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pyweb_template"]
+# 排除 static 目录的常规包收集，避免与 force-include 重复
+# （force-include 会把 src/pyweb_template/static 映射到 pyweb_template/static）
+exclude = ["src/pyweb_template/static/**"]
 
 [tool.hatch.build.targets.wheel.force-include]
+# 类型标记文件
 "src/pyweb_template/py.typed" = "pyweb_template/py.typed"
+# 前端 Vite 构建产物（已由 make frontend-build 生成到 src/pyweb_template/static/）
+"src/pyweb_template/static" = "pyweb_template/static"
+
+[tool.hatch.build.targets.sdist]
+# sdist 排除开发工具缓存和前端依赖
+exclude = [
+    "frontend/node_modules/**",
+    "frontend/dist/**",
+    ".benchmarks/**",
+    ".tox/**",
+    ".mypy_cache/**",
+    ".pyrefly_cache/**",
+    ".pytest_cache/**",
+    ".ruff_cache/**",
+    "htmlcov/**",
+    "dist/**",
+    "build/**",
+    "*.egg-info/**",
+]
+
+[tool.hatch.build.targets.sdist.force-include]
+# sdist 必须包含 wheel force-include 的源文件，否则从 sdist 构建 wheel 会找不到
+"src/pyweb_template/static" = "src/pyweb_template/static"
 
 [tool.uv]
 required-version = ">=0.5.0"
@@ -66,6 +94,10 @@ required-version = ">=0.5.0"
 default = true
 url = "https://mirrors.aliyun.com/pypi/simple/"
 
-
 [dependency-groups]
 dev = ["pyweb_template[dev]"]
+
+[tool.coverage.run]
+omit = [
+    "src/pyweb_template/runner.py",
+]

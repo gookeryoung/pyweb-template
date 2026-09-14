@@ -1,0 +1,54 @@
+# ────────────────────────────────────────────────────────────────────
+# pyweb_template 部署编排 — wheel 单容器精简形态
+#
+# 适用于 PyPI 安装后的快速部署：只跑 app 容器，内置前端静态文件。
+# PostgreSQL 为可选 profile（--profile pg 启用）
+#
+# 快速开始（SQLite）:
+#   docker compose -f docker-compose.wheel.yml up -d
+#
+# PostgreSQL:
+#   docker compose -f docker-compose.wheel.yml --profile pg up -d
+# ────────────────────────────────────────────────────────────────────
+services:
+  app:
+    image: docker.m.daocloud.io/python:3.14-slim
+    container_name: pywt-app
+    command: >
+      bash -c "pip install --no-cache-dir pyweb_template -i https://mirrors.aliyun.com/pypi/simple/
+      && uvicorn pyweb_template.app:app --host 0.0.0.0 --port 8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////data/pyweb_template.db}
+    volumes:
+      - pywt-data:/data
+    ports:
+      - "${PYWT_PORT:-8000}:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── PostgreSQL（可选 profile）──
+  postgres:
+    image: docker.m.daocloud.io/library/postgres:16-alpine
+    container_name: pywt-postgres
+    profiles: ["pg"]
+    environment:
+      POSTGRES_USER: pywt
+      POSTGRES_PASSWORD: ${PYWT_DB_PASSWORD:-pywt_pass}
+      POSTGRES_DB: pywt
+    volumes:
+      - pywt-pg-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pywt -d pywt"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pywt-data:
+  pywt-pg-data:

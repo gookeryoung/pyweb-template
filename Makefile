@@ -3,8 +3,9 @@
 
 PACKAGE := pyweb_template
 COV_THRESHOLD := 95
+PYTEST_JOBS := 8  # pytest-xdist 并行进程数；Windows 默认 8 避免句柄耗尽
 
-.PHONY: help sync build b clean c test cov lint typecheck typecheck-ci check doc tox bump patch minor major push
+.PHONY: help sync frontend-sync frontend-build build b clean c test cov lint typecheck typecheck-ci check doc tox bump patch minor major pub push
 
 help: ## 显示帮助信息
 	@uv run python -c "import re,sys;ms=[(m.group(1),m.group(2).strip()) for f in sys.argv[1:] for l in open(f,encoding='utf-8') if (m:=re.match(r'^([a-zA-Z][\w -]*):.*?##\s*(.*)',l))];[print(f'  {n:<14} {d}') for n,d in ms]" $(MAKEFILE_LIST)
@@ -12,7 +13,13 @@ help: ## 显示帮助信息
 sync: ## 安装开发依赖
 	uv sync --extra dev
 
-build b: ## 构建分发包 (wheel + sdist)
+frontend-sync: ## 安装前端依赖（npm ci）
+	cd frontend && npm ci
+
+frontend-build: frontend-sync ## 构建前端（Vite，产物输出到 src/pyweb_template/static/）
+	cd frontend && npm run build
+
+build b: frontend-build ## 构建分发包 (前端 → wheel + sdist)
 	uv build
 
 clean c: ## 清理构建产物与缓存
@@ -22,10 +29,11 @@ clean c: ## 清理构建产物与缓存
 	find src tests -type f -name "*.py[oc]" -delete
 
 test: ## 运行测试（不含覆盖率）
-	uv run pytest -m "not slow"
+	uv run pytest -m "not slow" -n $(PYTEST_JOBS)
 
-cov: ## 运行测试并检查覆盖率
-	uv run pytest -m "not slow" --cov=$(PACKAGE) --cov-fail-under=$(COV_THRESHOLD)
+cov: ## 运行测试并生成 HTML 覆盖率报告
+	uv run pytest -m "not slow" --cov=$(PACKAGE) --cov-fail-under=$(COV_THRESHOLD) --cov-report=term-missing --cov-report=html -n $(PYTEST_JOBS)
+	@uv run python -c "print('Coverage report: htmlcov/index.html')"
 
 lint: ## 代码风格检查 (ruff)
 	uv run ruff check .
